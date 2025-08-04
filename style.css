@@ -1,0 +1,114 @@
+body {
+    margin: 0;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #f6f6f9;
+    color: #222;
+    display: flex;
+  }
+  #sidebar {
+    width: 220px;
+    background: #232946;
+    color: #fff;
+    min-height: 100vh;
+    padding: 24px 0 0 0;
+  }
+  #sidebar h2 {
+    text-align: center;
+    margin-bottom: 2rem;
+    font-size: 1.4rem;
+  }
+  #sidebar ul {
+    list-style: none;
+    padding: 0;
+  }
+  #sidebar ul li {
+    margin: 1rem 0;
+  }
+  #sidebar ul li a {
+    color: #fff;
+    text-decoration: none;
+    font-weight: 500;
+    padding: 10px 24px;
+    display: block;
+    border-radius: 4px;
+  }
+  #sidebar ul li a:hover, #sidebar ul li a.active {
+    background: #393e5c;
+  }
+  main#main-content {
+    flex: 1;
+    padding: 32px;
+  }
+  .card {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  /* Estilos para la matriz funcional y responsiva */
+  .card table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 16px;
+    min-width: 600px;
+  }
+  .card th, .card td {
+    border: 1px solid #e0e0e0;
+    padding: 8px 12px;
+    text-align: center;
+    font-size: 0.97rem;
+  }
+  .card th {
+    background: #f0f0f6;
+    font-weight: 600;
+  }
+  .card th:first-child, .card td:first-child {
+    text-align: left;
+    background: #f8f8fa;
+    font-weight: 500;
+    min-width: 220px;
+    max-width: 340px;
+    width: 26vw;
+  }
+  .card th:not(:first-child), .card td:not(:first-child) {
+    min-width: 70px;
+    max-width: 90px;
+    width: 6vw;
+  }
+  .card tr:hover td {
+    background: #f4f7ff;
+  }
+  /* Celdas negras para parámetros excluidos */
+  .card td.celda-no-aplica {
+    background: #232323 !important;
+    border-color: #232323 !important;
+  }
+  /* Opcional: para que el hover no sobrescriba el negro */
+  .card tr:hover td.celda-no-aplica {
+    background: #232323 !important;
+  }
+  @media (max-width: 900px) {
+    .card table {
+      font-size: 0.89rem;
+      min-width: 400px;
+    }
+    .card th:first-child, .card td:first-child {
+      min-width: 120px;
+      width: 36vw;
+    }
+  }
+  @media (max-width: 600px) {
+    .card table {
+      font-size: 0.78rem;
+      min-width: 280px;
+    }
+    .card th, .card td {
+      padding: 5px 6px;
+    }
+    .card th:first-child, .card td:first-child {
+      min-width: 90px;
+      width: 44vw;
+      font-size: 0.93rem;
+    }
+  }
