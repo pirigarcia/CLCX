@@ -39,6 +39,7 @@ window.parametrosExcluidosPorSucursal = {
       "banos_estado"
     ],
     "guayabal": [
+      
       "tableta",
       "jardineras_macetas",
       "musica_volumen",

@@ -67,7 +67,7 @@ const definirParametros = [
     nombre: 'Contacto visual y saludo',
     descripcion: 'El colaborador lo saludó verbalmente y estableció contacto visual',
     tipo: 'booleano',
-    peso: 1,
+    peso:4,
     aplicaATodas: true
   },
   {
@@ -76,7 +76,7 @@ const definirParametros = [
     nombre: 'Agradecimiento y despedida',
     descripcion: 'El colaborador dio las gracias e invitó a volver',
     tipo: 'booleano',
-    peso: 1,
+    peso: 2,
     aplicaATodas: true
   },
 
@@ -105,7 +105,7 @@ const definirParametros = [
     nombre: 'Venta cruzada',
     descripcion: 'Ofreció productos adicionales (venta cruzada o sugerida)',
     tipo: 'booleano',
-    peso: 1,
+    peso: 5,
     aplicaATodas: true
   },
   {
@@ -143,7 +143,7 @@ const definirParametros = [
     nombre: 'Entrega de ticket',
     descripcion: 'Se entregó el ticket',
     tipo: 'booleano',
-    peso: 1,
+    peso: 3,
     aplicaATodas: true
   },
 
@@ -155,7 +155,7 @@ const definirParametros = [
     descripcion: 'Tiempo total de espera de atención',
     tipo: 'rango',
     opciones: ['Menos de 2 min', '2-5 min', '5-10 min', 'Más de 10 min'],
-    peso: 5,
+    peso: 3,
     aplicaATodas: true
   },
   {
@@ -165,7 +165,7 @@ const definirParametros = [
     descripcion: 'Tiempo total en la fila',
     tipo: 'rango',
     opciones: ['Menos de 2 min', '2-5 min', '5-10 min', 'Más de 10 min'],
-    peso: 5,
+    peso: 3,
     aplicaATodas: false
   },
   {
@@ -175,7 +175,7 @@ const definirParametros = [
     descripcion: 'Tiempo de espera para el café',
     tipo: 'rango',
     opciones: ['Menos de 2 min', '2-5 min', '5-10 min', 'Más de 10 min'],
-    peso: 5,
+    peso: 4,
     aplicaATodas: true
   },
 
@@ -195,7 +195,7 @@ const definirParametros = [
     nombre: 'Apariencia del personal',
     descripcion: 'Los colaboradores estaban limpios y de buena apariencia (uniformes negros)',
     tipo: 'booleano',
-    peso: 1,
+    peso: 3,
     aplicaATodas: true
   },
   {
@@ -204,7 +204,7 @@ const definirParametros = [
     nombre: 'Uso de tableta',
     descripcion: 'Estado y uso de la tableta',
     tipo: 'booleano',
-    peso: 1,
+    peso: 3,
     aplicaATodas: false
   },
 
@@ -215,7 +215,7 @@ const definirParametros = [
     nombre: 'Presentación del vaso',
     descripcion: 'Anotaron en el vaso el producto sin tachones ni manchas',
     tipo: 'booleano',
-    peso: 1,
+    peso: 4,
     aplicaATodas: true
   },
   {
@@ -224,7 +224,7 @@ const definirParametros = [
     nombre: 'Presentación del café',
     descripcion: 'Presentación del café adecuada (sin manchas)',
     tipo: 'booleano',
-    peso: 1,
+    peso: 6,
     aplicaATodas: true
   },
   {
@@ -233,7 +233,7 @@ const definirParametros = [
     nombre: 'Presentación de alimentos',
     descripcion: 'Presentación visual correcta del alimento',
     tipo: 'booleano',
-    peso: 1,
+    peso: 6,
     aplicaATodas: true
   },
   {
@@ -282,7 +282,7 @@ const definirParametros = [
     nombre: 'Iluminación',
     descripcion: 'Iluminación interior en buen estado',
     tipo: 'booleano',
-    peso: 1,
+    peso: 2,
     aplicaATodas: false
   },
   {
@@ -291,7 +291,7 @@ const definirParametros = [
     nombre: 'Puertas y vidrios',
     descripcion: 'Puertas de acceso y vidrios limpios',
     tipo: 'booleano',
-    peso: 1,
+    peso: 2,
     aplicaATodas: false
   },
   {
@@ -300,7 +300,7 @@ const definirParametros = [
     nombre: 'Música y volumen',
     descripcion: 'Música con volumen adecuado (instrumental o bossa nova)',
     tipo: 'booleano',
-    peso: 1,
+    peso: 2,
     aplicaATodas: false
   },
   {
@@ -309,7 +309,7 @@ const definirParametros = [
     nombre: 'Área de mostrador',
     descripcion: 'Área de mostrador con orden y limpieza',
     tipo: 'booleano',
-    peso: 1,
+    peso: 2,
     aplicaATodas: false
   },
   {
@@ -318,7 +318,7 @@ const definirParametros = [
     nombre: 'Limpieza de mesas y sillas',
     descripcion: 'Sillas y mesas (dentro y fuera) limpias',
     tipo: 'booleano',
-    peso: 1,
+    peso: 2,
     aplicaATodas: false
   },
   {
@@ -327,7 +327,7 @@ const definirParametros = [
     nombre: 'Limpieza de pisos',
     descripcion: 'Piso limpio',
     tipo: 'booleano',
-    peso: 1,
+    peso: 3,
     aplicaATodas: false
   },
   {
@@ -336,7 +336,7 @@ const definirParametros = [
     nombre: 'Estado de baños',
     descripcion: 'Baños limpios (vidrios, olor, papel, jabón)',
     tipo: 'booleano',
-    peso: 1,
+    peso: 2,
     aplicaATodas: false
   },
   {
@@ -345,7 +345,7 @@ const definirParametros = [
     nombre: 'Estado de botes de basura',
     descripcion: 'Botes de basura limpios y no llenos',
     tipo: 'booleano',
-    peso: 1,
+    peso: 2,
     aplicaATodas: false
   },
   {
@@ -363,7 +363,7 @@ const definirParametros = [
     nombre: 'Climatización',
     descripcion: 'Climatización funcionando correctamente',
     tipo: 'booleano',
-    peso: 1,
+    peso: 4,
     aplicaATodas: true
   },
   {
@@ -372,7 +372,7 @@ const definirParametros = [
     nombre: 'Estado de muebles',
     descripcion: 'Mesas y sillas en buen estado físico',
     tipo: 'booleano',
-    peso: 1,
+    peso: 3,
     aplicaATodas: false
   }
 ];

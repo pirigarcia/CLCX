@@ -112,3 +112,93 @@ body {
       font-size: 0.93rem;
     }
   }
+
+  /* En tu style.css */
+.celda-seleccionada {
+  background: #e6e6e6 !important;
+}
+.celda-seleccionada .valor-parametro {
+  font-weight: bold;
+  color: #222;
+}
+
+/* Login container centrado y con fondo */
+#login-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(120deg, #f8fafb 60%, #e0e7ef 100%);
+  position: fixed;
+  width: 100vw;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+}
+
+/* Tarjeta de login */
+#login-form.card {
+  background: #fff;
+  padding: 2.5rem 2rem 2rem 2rem;
+  border-radius: 18px;
+  box-shadow: 0 4px 24px 0 #0002;
+  display: flex;
+  flex-direction: column;
+  min-width: 320px;
+  gap: 1.1rem;
+}
+
+#login-form h2 {
+  margin-bottom: 1.2rem;
+  font-weight: 700;
+  color: #393e5c;
+  letter-spacing: 1px;
+}
+
+#login-form input[type="email"],
+#login-form input[type="password"] {
+  padding: 0.7rem 1rem;
+  border-radius: 7px;
+  border: 1px solid #d1d5db;
+  background: #f6f8fa;
+  font-size: 1rem;
+  outline: none;
+  transition: border 0.2s;
+}
+
+#login-form input:focus {
+  border: 1.5px solid #3b82f6;
+  background: #fff;
+}
+
+#login-form button[type="submit"] {
+  background: #393e5c;
+  color: #fff;
+  font-weight: 600;
+  border: none;
+  border-radius: 7px;
+  padding: 0.8rem 0;
+  font-size: 1.07rem;
+  cursor: pointer;
+  box-shadow: 0 2px 8px 0 #0001;
+  transition: background 0.2s;
+}
+
+#login-form button[type="submit"]:hover {
+  background: #22263a;
+}
+
+#login-error {
+  min-height: 1.2em;
+  font-size: 0.98rem;
+  letter-spacing: 0.2px;
+  text-align: center;
+}
+
+/* Responsive para login */
+@media (max-width: 500px) {
+  #login-form.card {
+    min-width: 90vw;
+    padding: 1.2rem 0.5rem 1.5rem 0.5rem;
+  }
+}

@@ -7,6 +7,15 @@
   <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
+  <div id="login-container" style="display:none;">
+    <form id="login-form" class="card" autocomplete="off">
+      <h2>Iniciar sesión</h2>
+      <input type="email" id="login-email" placeholder="Correo" required autocomplete="username" />
+      <input type="password" id="login-password" placeholder="Contraseña" required autocomplete="current-password" />
+      <button type="submit">Entrar</button>
+      <div id="login-error" style="color:red; margin-top:8px;"></div>
+    </form>
+  </div>
   <aside id="sidebar">
     <h2>The Unknown Shopper</h2>
     <nav>
@@ -18,14 +27,25 @@
         <li><a href="#" data-section="usuarios">Usuarios</a></li>
       </ul>
     </nav>
+    <button id="logout-btn" style="margin: 1.5rem 0.5rem 0 0.5rem; padding: 0.5rem 1.2rem; border-radius: 7px; background: #e53e3e; color: #fff; border: none; font-weight: 600; cursor: pointer; box-shadow: 0 2px 8px 0 #0001;">Cerrar sesión</button>
   </aside>
   <main id="main-content">
     <!-- Aquí se cargará el contenido dinámicamente -->
   </main>
-  <script src="main.js"></script>
+  <!-- Firebase App (core) -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<!-- Firebase Auth -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<!-- Firebase Firestore -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<!-- Tu config y main.js -->
+<script src="firebaseConfig.js"></script>
+
   <script src="data/parametros.js"></script>
   <script src="data/franquicias.js"></script>
   <script src="data/parametros_excluidos.js"></script>
   <script src="data/sucursales.js"></script>
+  <script src="main.js"></script>
 </body>
 </html>
