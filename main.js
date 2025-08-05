@@ -403,15 +403,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
         case 'graficas':
-          // --- BLOQUE NUEVO: Gráfica de barras comparativa con Chart.js y permisos ---
-          // Crear contenedor para la gráfica
+          // --- DEFINICIÓN DE IDS PARA GRÁFICAS DE ATENCIÓN Y VENTA ---
+          const IDS_ATENCION = [
+            'contacto_visual_saludo', 'agradecimiento_despedida', 'atencion_mesa', 'entregar_ticket',
+            'tiempo_espera_atencion', 'tiempo_en_fila', 'tiempo_preparacion'
+          ];
+          const IDS_VENTA = [
+            'conocimiento_productos', 'producto_mes', 'venta_cruzada', 'app_cabana_cash'
+          ];
+
+          // --- BLOQUE DE GRÁFICAS ---
           main.innerHTML = `
             <div class="card">
               <h1>Gráficas Comparativas</h1>
               <canvas id="grafica-kpi" height="120"></canvas>
+              <h2 style="margin-top:36px;">Atención vs Venta</h2>
+              <canvas id="grafica-atencion-venta" height="120"></canvas>
+              <h2 style="margin-top:36px;">Comparativo por Categoría</h2>
+              <canvas id="grafica-categoria" height="120"></canvas>
             </div>
           `;
-          // Filtrar datos según permisos
+
+          // --- DATOS PARA % KPI (ya existente) ---
           let columnasGraficas = [];
           if (window.userRole === "admin" || window.userRole === "dg") {
             columnasGraficas = [...(window.sucursales||[]), ...(window.franquicias||[])];
@@ -420,12 +433,14 @@ document.addEventListener('DOMContentLoaded', () => {
           } else if (window.userRole === "franquicias") {
             columnasGraficas = [...(window.franquicias||[])];
           }
-          // Calcular % KPI para cada columna
+
+          // --- DATOS PARA GRÁFICA DE ATENCIÓN Y VENTA ---
           let dataLabels = [];
           let dataKPI = [];
+          let dataAtencion = [];
+          let dataVenta = [];
           columnasGraficas.forEach(suc => {
-            let suma = 0;
-            let max = 0;
+            let suma = 0, max = 0, sumaAtencion = 0, maxAtencion = 0, sumaVenta = 0, maxVenta = 0;
             (window.parametros||[]).forEach(param => {
               let excluidosArr = [];
               if (typeof esFranquicia === "function" && esFranquicia(suc.id)) {
@@ -436,31 +451,79 @@ document.addEventListener('DOMContentLoaded', () => {
                 excluidosArr = (window.parametrosExcluidosPorSucursal||{})[suc.id] || [];
               }
               const esExcluido = excluidosArr.includes(param.id);
+              const valor = window.matrizEvaluacion[suc.id]?.[param.id] || 0;
               if (!esExcluido) {
-                const valor = window.matrizEvaluacion[suc.id]?.[param.id] || 0;
                 suma += Number(valor);
                 max += Number(param.peso || 0);
+                if (IDS_ATENCION.includes(param.id)) {
+                  sumaAtencion += Number(valor);
+                  maxAtencion += Number(param.peso || 0);
+                }
+                if (IDS_VENTA.includes(param.id)) {
+                  sumaVenta += Number(valor);
+                  maxVenta += Number(param.peso || 0);
+                }
               }
             });
             dataLabels.push(suc.nombre);
             dataKPI.push(max > 0 ? ((suma / max) * 100).toFixed(1) : 0);
+            dataAtencion.push(maxAtencion > 0 ? ((sumaAtencion / maxAtencion) * 100).toFixed(1) : 0);
+            dataVenta.push(maxVenta > 0 ? ((sumaVenta / maxVenta) * 100).toFixed(1) : 0);
           });
+
+          // --- LOGS PARA DEPURAR ---
           console.log('Labels para gráfica:', dataLabels);
           console.log('Valores KPI para gráfica:', dataKPI);
-          // Cargar Chart.js si no está cargado
+          console.log('Atención:', dataAtencion);
+          console.log('Venta:', dataVenta);
+
+          // --- DATOS PARA GRÁFICA DE CATEGORÍA ---
+          const categorias = ['Cafetería', 'Express', 'Móvil'];
+          let dataCategoria = [0, 0, 0];
+          let cuentaCategoria = [0, 0, 0];
+          columnasGraficas.forEach(suc => {
+            let suma = 0, max = 0;
+            (window.parametros||[]).forEach(param => {
+              let excluidosArr = [];
+              if (typeof esFranquicia === "function" && esFranquicia(suc.id)) {
+                excluidosArr = window.obtenerParametrosExcluidosFranquicia
+                  ? window.obtenerParametrosExcluidosFranquicia(suc.id)
+                  : [];
+              } else {
+                excluidosArr = (window.parametrosExcluidosPorSucursal||{})[suc.id] || [];
+              }
+              const esExcluido = excluidosArr.includes(param.id);
+              const valor = window.matrizEvaluacion[suc.id]?.[param.id] || 0;
+              if (!esExcluido) {
+                suma += Number(valor);
+                max += Number(param.peso || 0);
+              }
+            });
+            const idx = categorias.indexOf(suc.modelo);
+            if (idx !== -1 && max > 0) {
+              dataCategoria[idx] += (suma / max) * 100;
+              cuentaCategoria[idx] += 1;
+            }
+          });
+          // Promedio por categoría
+          dataCategoria = dataCategoria.map((total, i) => cuentaCategoria[i] > 0 ? (total / cuentaCategoria[i]).toFixed(1) : 0);
+          console.log('Comparativo por Categoría:', categorias, dataCategoria);
+
+          // --- RENDER GRÁFICA KPI (ya existente) ---
           if (!window.Chart) {
             const script = document.createElement('script');
             script.src = 'https://cdn.jsdelivr.net/npm/chart.js';
-            script.onload = renderGraficaKPI;
+            script.onload = renderGraficas;
             document.head.appendChild(script);
           } else {
-            renderGraficaKPI();
+            renderGraficas();
           }
-          function renderGraficaKPI() {
-            console.log('Renderizando Chart.js con:', dataLabels, dataKPI);
-            const ctx = document.getElementById('grafica-kpi').getContext('2d');
+
+          function renderGraficas() {
+            // Gráfica KPI
+            const ctxKPI = document.getElementById('grafica-kpi').getContext('2d');
             if (window._graficaKPI) window._graficaKPI.destroy();
-            window._graficaKPI = new Chart(ctx, {
+            window._graficaKPI = new Chart(ctxKPI, {
               type: 'bar',
               data: {
                 labels: dataLabels,
@@ -473,20 +536,64 @@ document.addEventListener('DOMContentLoaded', () => {
               },
               options: {
                 responsive: true,
-                plugins: {
-                  legend: { display: false },
-                  tooltip: { enabled: true }
-                },
+                plugins: { legend: { display: false }, tooltip: { enabled: true } },
                 scales: {
-                  y: {
-                    beginAtZero: true,
-                    max: 100,
-                    ticks: { callback: v => v + '%' },
-                    title: { display: true, text: '% KPI' }
+                  y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' }, title: { display: true, text: '% KPI' } },
+                  x: { title: { display: true, text: 'Sucursal / Franquicia' } }
+                }
+              }
+            });
+            // Gráfica Atención/Venta
+            const ctxAV = document.getElementById('grafica-atencion-venta').getContext('2d');
+            if (window._graficaAV) window._graficaAV.destroy();
+            window._graficaAV = new Chart(ctxAV, {
+              type: 'bar',
+              data: {
+                labels: dataLabels,
+                datasets: [
+                  {
+                    label: '% Atención',
+                    data: dataAtencion,
+                    backgroundColor: '#4e54c8',
+                    borderRadius: 8,
                   },
-                  x: {
-                    title: { display: true, text: 'Sucursal / Franquicia' }
+                  {
+                    label: '% Venta',
+                    data: dataVenta,
+                    backgroundColor: '#38ef7d',
+                    borderRadius: 8,
                   }
+                ]
+              },
+              options: {
+                responsive: true,
+                plugins: { legend: { display: true }, tooltip: { enabled: true } },
+                scales: {
+                  y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' }, title: { display: true, text: '% por rubro' } },
+                  x: { title: { display: true, text: 'Sucursal / Franquicia' } }
+                }
+              }
+            });
+            // Gráfica Comparativo por Categoría
+            const ctxCat = document.getElementById('grafica-categoria').getContext('2d');
+            if (window._graficaCategoria) window._graficaCategoria.destroy();
+            window._graficaCategoria = new Chart(ctxCat, {
+              type: 'bar',
+              data: {
+                labels: categorias,
+                datasets: [{
+                  label: '% KPI promedio',
+                  data: dataCategoria,
+                  backgroundColor: ['#4e54c8', '#38ef7d', '#f7971e'],
+                  borderRadius: 8,
+                }]
+              },
+              options: {
+                responsive: true,
+                plugins: { legend: { display: false }, tooltip: { enabled: true } },
+                scales: {
+                  y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' }, title: { display: true, text: '% KPI promedio' } },
+                  x: { title: { display: true, text: 'Categoría' } }
                 }
               }
             });
