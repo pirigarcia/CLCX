@@ -1,3 +1,55 @@
+window.matrizEvaluacion = {}; // { sucursalId: { parametroId: valor, ... }, ... }
+
+async function guardarMatrizBorrador() {
+  const mesActual = new Date().toISOString().slice(0, 7); // Ejemplo: "2025-08"
+  await firebase.firestore().collection('evaluaciones_matriz').doc(mesActual).set({
+    matriz: window.matrizEvaluacion,
+    publicado: false,
+    fecha: firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge: true });
+}
+
+// --- FUNCIONES PARA MATRIZ EVALUACION ---
+
+// Actualiza la matriz local y guarda en Firebase
+function actualizarMatrizEvaluacion(sucursalId, paramId, valor) {
+  if (!window.matrizEvaluacion[sucursalId]) window.matrizEvaluacion[sucursalId] = {};
+  if (valor === null) {
+    delete window.matrizEvaluacion[sucursalId][paramId];
+  } else {
+    window.matrizEvaluacion[sucursalId][paramId] = valor;
+  }
+  guardarMatrizBorrador();
+}
+
+// Cargar matriz desde Firebase (según rol y estado publicado)
+async function cargarMatrizEvaluacion() {
+  const mesActual = new Date().toISOString().slice(0, 7);
+  const doc = await firebase.firestore().collection('evaluaciones_matriz').doc(mesActual).get();
+  const data = doc.data();
+  if (!data) {
+    window.matrizEvaluacion = {};
+    return;
+  }
+  if (window.userRole === 'admin' || data.publicado) {
+    window.matrizEvaluacion = data.matriz || {};
+  } else {
+    window.matrizEvaluacion = {};
+  }
+}
+
+// Publicar matriz (solo admin)
+async function publicarMatrizEvaluacion() {
+  const mesActual = new Date().toISOString().slice(0, 7);
+  await firebase.firestore().collection('evaluaciones_matriz').doc(mesActual).update({
+    publicado: true,
+    creadoPor: firebase.auth().currentUser.email,
+    fecha: firebase.firestore.FieldValue.serverTimestamp(),
+  });
+  alert('¡Matriz publicada!');
+}
+// --- FIN FUNCIONES MATRIZ ---
+
 // 1. Inicializar Firebase (asegúrate de tener firebaseConfig.js cargado)
 if (!firebase.apps.length) {
   firebase.initializeApp(firebaseConfig);
@@ -151,75 +203,102 @@ document.addEventListener('DOMContentLoaded', () => {
   const parametros = window.parametros || [];
   const excluidos = window.parametrosExcluidosPorSucursal || {};
 
-  let columnas = [];
-  if (window.userRole === "admin" || window.userRole === "dg") {
-    columnas = [...sucursales, ...franquicias];
-  } else if (window.userRole === "gop") {
-    columnas = sucursales;
-  } else if (window.userRole === "franquicias") {
-    columnas = franquicias;
-  }
+  cargarMatrizEvaluacion().then(() => {
+    let columnas = [];
+    if (window.userRole === "admin" || window.userRole === "dg") {
+      columnas = [...sucursales, ...franquicias];
+    } else if (window.userRole === "gop") {
+      columnas = sucursales;
+    } else if (window.userRole === "franquicias") {
+      columnas = franquicias;
+    }
 
-  let tableHead = '<tr><th>Parámetro</th>';
-  columnas.forEach(suc => {
-    tableHead += `<th>${suc.nombre}</th>`;
-  });
-  tableHead += '</tr>';
-
-  let tableBody = '';
-  parametros.forEach(param => {
-    tableBody += `<tr><td>${param.nombre}</td>`;
+    let tableHead = '<tr><th>Parámetro</th>';
     columnas.forEach(suc => {
-      let excluidosArr = [];
-      if (typeof esFranquicia === "function" && esFranquicia(suc.id)) {
-        excluidosArr = window.obtenerParametrosExcluidosFranquicia
-          ? window.obtenerParametrosExcluidosFranquicia(suc.id)
-          : [];
-      } else {
-        excluidosArr = excluidos[suc.id] || [];
-      }
-      const esExcluido = excluidosArr.includes(param.id);
-      if (esExcluido) {
-        tableBody += `<td class="celda-no-aplica"></td>`;
-      } else {
-        tableBody += `<td class="celda-parametro" data-param-id="${param.id}" data-col-id="${suc.id}" style="cursor: ${window.userRole === 'admin' ? 'pointer' : 'default'};"></td>`;
-      }
+      tableHead += `<th>${suc.nombre}</th>`;
     });
-    tableBody += '</tr>';
-  });
+    tableHead += '</tr>';
 
-  main.innerHTML = `
-    <div style="margin-bottom:12px; font-size:1rem; color:#393e5c;">
-      <strong>Usuario actual:</strong> <span style="text-transform:capitalize;">${window.userRole}</span> &mdash; <strong>Columnas visibles:</strong> ${columnas.length}
-    </div>
-    <div class="card">
-      <h1>Matriz de Evaluación</h1>
-      <div style="overflow-x:auto;">
-        <table>
-          <thead>${tableHead}</thead>
-          <tbody>${tableBody}</tbody>
-        </table>
-      </div>
-    </div>
-  `;
-
-  // Solo el admin puede editar
-  if (window.userRole === 'admin') {
-    const celdas = main.querySelectorAll('.celda-parametro');
-    celdas.forEach(celda => {
-      celda.addEventListener('click', function() {
-        if (celda.classList.contains('celda-seleccionada')) {
-          celda.classList.remove('celda-seleccionada');
-          celda.innerHTML = '';
+    let tableBody = '';
+    parametros.forEach(param => {
+      tableBody += `<tr><td>${param.nombre}</td>`;
+      columnas.forEach(suc => {
+        let excluidosArr = [];
+        if (typeof esFranquicia === "function" && esFranquicia(suc.id)) {
+          excluidosArr = window.obtenerParametrosExcluidosFranquicia
+            ? window.obtenerParametrosExcluidosFranquicia(suc.id)
+            : [];
         } else {
-          const paramId = celda.getAttribute('data-param-id');
-          const param = parametros.find(p => p.id === paramId);
-          celda.classList.add('celda-seleccionada');
-          celda.innerHTML = `<span class='valor-parametro'>${param.peso}</span>`;
+          excluidosArr = excluidos[suc.id] || [];
+        }
+        const esExcluido = excluidosArr.includes(param.id);
+        if (esExcluido) {
+          tableBody += `<td class="celda-no-aplica"></td>`;
+        } else {
+          // Determinar si la celda debe estar seleccionada
+          const valor = window.matrizEvaluacion[suc.id]?.[param.id] || '';
+          const seleccionada = valor ? 'celda-seleccionada' : '';
+          const contenido = valor ? `<span class='valor-parametro'>${valor}</span>` : '';
+          // Solo admin puede editar
+          let tdClass = `celda-parametro ${seleccionada}`;
+          let tdAttrs = `data-param-id="${param.id}" data-col-id="${suc.id}"`;
+          if (window.userRole === 'admin') {
+            tableBody += `<td class="${tdClass}" ${tdAttrs} style="cursor:pointer;">${contenido}</td>`;
+          } else {
+            tableBody += `<td class="${tdClass}" ${tdAttrs} style="cursor:default;">${contenido}</td>`;
+          }
         }
       });
+      tableBody += '</tr>';
     });
-  }
+
+    main.innerHTML = `
+      <div style="margin-bottom:12px; font-size:1rem; color:#393e5c;">
+        <strong>Usuario actual:</strong> <span style="text-transform:capitalize;">${window.userRole}</span> &mdash; <strong>Columnas visibles:</strong> ${columnas.length}
+      </div>
+      <div class="card">
+        <h1>Matriz de Evaluación</h1>
+        <div style="overflow-x:auto;">
+          <table>
+            <thead>${tableHead}</thead>
+            <tbody>${tableBody}</tbody>
+          </table>
+        </div>
+      </div>
+    `;
+
+    // Solo el admin puede editar
+    if (window.userRole === 'admin') {
+      const celdas = main.querySelectorAll('.celda-parametro');
+      celdas.forEach(celda => {
+        celda.addEventListener('click', function() {
+          const sucursalId = celda.getAttribute('data-col-id');
+          const paramId = celda.getAttribute('data-param-id');
+          const param = parametros.find(p => p.id === paramId);
+          if (celda.classList.contains('celda-seleccionada')) {
+            celda.classList.remove('celda-seleccionada');
+            celda.innerHTML = '';
+            actualizarMatrizEvaluacion(sucursalId, paramId, null);
+          } else {
+            celda.classList.add('celda-seleccionada');
+            celda.innerHTML = `<span class='valor-parametro'>${param.peso}</span>`;
+            actualizarMatrizEvaluacion(sucursalId, paramId, param.peso);
+          }
+        });
+      });
+      // Botón publicar solo admin
+      const btnPublicar = document.createElement('button');
+      btnPublicar.textContent = 'Publicar matriz mensual';
+      btnPublicar.id = 'btn-publicar-matriz';
+      btnPublicar.style.margin = '18px 0 0 0';
+      main.appendChild(btnPublicar);
+      btnPublicar.addEventListener('click', publicarMatrizEvaluacion);
+    }
+    // Si no es admin y la matriz no está publicada, mostrar mensaje
+    if (window.userRole !== 'admin' && Object.keys(window.matrizEvaluacion).length === 0) {
+      main.innerHTML = "<div class='card'><h2>Matriz aún no publicada.</h2></div>";
+    }
+  });
   break;
         
           // Matriz invertida: parámetros en filas, sucursales/franquicias en columnas, filtradas por rol y exclusión
