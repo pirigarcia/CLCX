@@ -13,6 +13,7 @@ async function guardarMatrizBorrador() {
 
 // Actualiza la matriz local y guarda en Firebase
 function actualizarMatrizEvaluacion(sucursalId, paramId, valor) {
+  if (window.userRole !== 'admin') return; // Solo admin puede editar
   if (!window.matrizEvaluacion[sucursalId]) window.matrizEvaluacion[sucursalId] = {};
   if (valor === null) {
     delete window.matrizEvaluacion[sucursalId][paramId];
@@ -103,8 +104,15 @@ document.getElementById('login-form').addEventListener('submit', function(e) {
 auth.onAuthStateChanged(user => {
   if (user && ALLOWED_USERS.includes(user.email)) {
     window.userRole = getRoleFromEmail(user.email); // Asigna el rol según el email
+    console.log('[onAuthStateChanged] Usuario autenticado:', user.email, 'Rol asignado:', window.userRole);
     showApp();
+    // Refresca la sección activa (por ejemplo, la matriz si está activa)
+    const activeSection = document.querySelector('#sidebar .active')?.dataset.section || 'dashboard';
+    if (typeof loadSection === 'function') {
+      loadSection(activeSection);
+    }
   } else {
+    console.log('[onAuthStateChanged] Usuario no autenticado');
     showLogin();
   }
 });
@@ -118,11 +126,13 @@ document.getElementById('logout-btn').addEventListener('click', function() {
 
 // 7. Función auxiliar para roles
 function getRoleFromEmail(email) {
-  if (email === "unknownshoppersmx@gmail.com") return "admin";
-  if (email === "gop@cafelacabana.com") return "gop";
-  if (email === "franquicias@cafelacabana.com") return "franquicias";
-  if (email === "dg@cafelacabana.com") return "dg";
-  return "usuario";
+  let rol = "usuario";
+  if (email === "unknownshoppersmx@gmail.com") rol = "admin";
+  if (email === "gop@cafelacabana.com") rol = "gop";
+  if (email === "franquicias@cafelacabana.com") rol = "franquicias";
+  if (email === "dg@cafelacabana.com") rol = "dg";
+  console.log('[getRoleFromEmail] Email:', email, '-> Rol:', rol);
+  return rol;
 }
 
 // --- DEBUG: Verifica coincidencia de IDs entre parametros y parametros excluidos ---
@@ -141,9 +151,6 @@ if (window.parametrosExcluidosPorSucursal && window.parametros) {
   console.error('parametrosExcluidosPorSucursal o parametros no están definidos. Verifica el orden de carga de los scripts.');
 }
 // --- FIN DEBUG ---
-
-// Puedes cambiar el valor a 'admin', 'gop' o 'franquicias' para probar
-window.userRole = 'admin'; // 'admin', 'gop', 'franquicias'
 
 // --- FUNCION AUXILIAR PARA DETECTAR FRANQUICIA ---
 function esFranquicia(id) {
@@ -204,13 +211,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const excluidos = window.parametrosExcluidosPorSucursal || {};
 
   cargarMatrizEvaluacion().then(() => {
+    console.log('[loadSection:matriz] Renderizando matriz para rol:', window.userRole);
+    // FILTRO ESTRICTO DE COLUMNAS SEGÚN ROL
     let columnas = [];
     if (window.userRole === "admin" || window.userRole === "dg") {
       columnas = [...sucursales, ...franquicias];
     } else if (window.userRole === "gop") {
-      columnas = sucursales;
+      columnas = [...sucursales];
     } else if (window.userRole === "franquicias") {
-      columnas = franquicias;
+      columnas = [...franquicias];
     }
 
     let tableHead = '<tr><th>Parámetro</th>';
@@ -252,6 +261,51 @@ document.addEventListener('DOMContentLoaded', () => {
       tableBody += '</tr>';
     });
 
+    // === BLOQUE NUEVO: Sumas y Porcentajes por columna ===
+    // Calcular sumas y máximos por columna
+    let sumaPorColumna = {};
+    let maxPorColumna = {};
+    columnas.forEach(suc => {
+      sumaPorColumna[suc.id] = 0;
+      maxPorColumna[suc.id] = 0;
+      parametros.forEach(param => {
+        let excluidosArr = [];
+        if (typeof esFranquicia === "function" && esFranquicia(suc.id)) {
+          excluidosArr = window.obtenerParametrosExcluidosFranquicia
+            ? window.obtenerParametrosExcluidosFranquicia(suc.id)
+            : [];
+        } else {
+          excluidosArr = excluidos[suc.id] || [];
+        }
+        const esExcluido = excluidosArr.includes(param.id);
+        if (!esExcluido) {
+          const valor = window.matrizEvaluacion[suc.id]?.[param.id] || 0;
+          sumaPorColumna[suc.id] += Number(valor);
+          maxPorColumna[suc.id] += Number(param.peso || 0);
+        }
+      });
+    });
+
+    // Fila de sumas
+    let filaSuma = '<tr><td><strong>Total</strong></td>';
+    columnas.forEach(suc => {
+      filaSuma += `<td><strong>${sumaPorColumna[suc.id]}</strong></td>`;
+    });
+    filaSuma += '</tr>';
+
+    // Fila de porcentaje/KPI
+    let filaPorcentaje = '<tr><td><strong>% KPI</strong></td>';
+    columnas.forEach(suc => {
+      const porcentaje = maxPorColumna[suc.id] > 0
+        ? ((sumaPorColumna[suc.id] / maxPorColumna[suc.id]) * 100).toFixed(1)
+        : '0.0';
+      filaPorcentaje += `<td><strong>${porcentaje}%</strong></td>`;
+    });
+    filaPorcentaje += '</tr>';
+
+    // Agrega las filas al final del tbody
+    tableBody += filaSuma + filaPorcentaje;
+
     main.innerHTML = `
       <div style="margin-bottom:12px; font-size:1rem; color:#393e5c;">
         <strong>Usuario actual:</strong> <span style="text-transform:capitalize;">${window.userRole}</span> &mdash; <strong>Columnas visibles:</strong> ${columnas.length}
@@ -267,7 +321,7 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>
     `;
 
-    // Solo el admin puede editar
+    // SOLO ADMIN AGREGA LISTENERS DE EDICIÓN Y BOTONES DE ACCIÓN
     if (window.userRole === 'admin') {
       const celdas = main.querySelectorAll('.celda-parametro');
       celdas.forEach(celda => {
@@ -286,13 +340,57 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         });
       });
-      // Botón publicar solo admin
+
+      // --- BLOQUE NUEVO: Botones de acción visualmente profesionales ---
+      const btnContainer = document.createElement('div');
+      btnContainer.style.display = 'flex';
+      btnContainer.style.gap = '16px';
+      btnContainer.style.margin = '24px 0 0 0';
+      btnContainer.style.justifyContent = 'flex-end';
+
+      // Botón guardar cambios (borrador)
+      const btnGuardar = document.createElement('button');
+      btnGuardar.textContent = ' Guardar cambios (borrador)';
+      btnGuardar.id = 'btn-guardar-borrador';
+      btnGuardar.style.background = 'linear-gradient(90deg,#4e54c8,#8f94fb)';
+      btnGuardar.style.color = '#fff';
+      btnGuardar.style.border = 'none';
+      btnGuardar.style.padding = '10px 20px';
+      btnGuardar.style.borderRadius = '6px';
+      btnGuardar.style.fontWeight = 'bold';
+      btnGuardar.style.fontSize = '1rem';
+      btnGuardar.style.cursor = 'pointer';
+      btnGuardar.style.boxShadow = '0 2px 8px rgba(78,84,200,0.1)';
+      btnGuardar.addEventListener('mouseenter',()=>btnGuardar.style.opacity='0.85');
+      btnGuardar.addEventListener('mouseleave',()=>btnGuardar.style.opacity='1');
+      btnGuardar.addEventListener('click', () => {
+        guardarMatrizBorrador();
+        btnGuardar.textContent = ' Cambios guardados';
+        setTimeout(()=>{
+          btnGuardar.textContent = ' Guardar cambios (borrador)';
+        }, 1500);
+      });
+      btnContainer.appendChild(btnGuardar);
+
+      // Botón publicar matriz mensual
       const btnPublicar = document.createElement('button');
-      btnPublicar.textContent = 'Publicar matriz mensual';
+      btnPublicar.textContent = ' Publicar matriz mensual';
       btnPublicar.id = 'btn-publicar-matriz';
-      btnPublicar.style.margin = '18px 0 0 0';
-      main.appendChild(btnPublicar);
+      btnPublicar.style.background = 'linear-gradient(90deg,#11998e,#38ef7d)';
+      btnPublicar.style.color = '#fff';
+      btnPublicar.style.border = 'none';
+      btnPublicar.style.padding = '10px 20px';
+      btnPublicar.style.borderRadius = '6px';
+      btnPublicar.style.fontWeight = 'bold';
+      btnPublicar.style.fontSize = '1rem';
+      btnPublicar.style.cursor = 'pointer';
+      btnPublicar.style.boxShadow = '0 2px 8px rgba(17,153,142,0.1)';
+      btnPublicar.addEventListener('mouseenter',()=>btnPublicar.style.opacity='0.85');
+      btnPublicar.addEventListener('mouseleave',()=>btnPublicar.style.opacity='1');
       btnPublicar.addEventListener('click', publicarMatrizEvaluacion);
+      btnContainer.appendChild(btnPublicar);
+
+      main.appendChild(btnContainer);
     }
     // Si no es admin y la matriz no está publicada, mostrar mensaje
     if (window.userRole !== 'admin' && Object.keys(window.matrizEvaluacion).length === 0) {
@@ -305,14 +403,94 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
         case 'graficas':
+          // --- BLOQUE NUEVO: Gráfica de barras comparativa con Chart.js y permisos ---
+          // Crear contenedor para la gráfica
           main.innerHTML = `
             <div class="card">
               <h1>Gráficas Comparativas</h1>
-              <div style="height:220px; background:#f0f0f0; border-radius:8px; display:flex; align-items:center; justify-content:center;">
-                <span style="color:#999;">Aquí irán las gráficas comparativas</span>
-              </div>
+              <canvas id="grafica-kpi" height="120"></canvas>
             </div>
           `;
+          // Filtrar datos según permisos
+          let columnasGraficas = [];
+          if (window.userRole === "admin" || window.userRole === "dg") {
+            columnasGraficas = [...(window.sucursales||[]), ...(window.franquicias||[])];
+          } else if (window.userRole === "gop") {
+            columnasGraficas = [...(window.sucursales||[])];
+          } else if (window.userRole === "franquicias") {
+            columnasGraficas = [...(window.franquicias||[])];
+          }
+          // Calcular % KPI para cada columna
+          let dataLabels = [];
+          let dataKPI = [];
+          columnasGraficas.forEach(suc => {
+            let suma = 0;
+            let max = 0;
+            (window.parametros||[]).forEach(param => {
+              let excluidosArr = [];
+              if (typeof esFranquicia === "function" && esFranquicia(suc.id)) {
+                excluidosArr = window.obtenerParametrosExcluidosFranquicia
+                  ? window.obtenerParametrosExcluidosFranquicia(suc.id)
+                  : [];
+              } else {
+                excluidosArr = (window.parametrosExcluidosPorSucursal||{})[suc.id] || [];
+              }
+              const esExcluido = excluidosArr.includes(param.id);
+              if (!esExcluido) {
+                const valor = window.matrizEvaluacion[suc.id]?.[param.id] || 0;
+                suma += Number(valor);
+                max += Number(param.peso || 0);
+              }
+            });
+            dataLabels.push(suc.nombre);
+            dataKPI.push(max > 0 ? ((suma / max) * 100).toFixed(1) : 0);
+          });
+          console.log('Labels para gráfica:', dataLabels);
+          console.log('Valores KPI para gráfica:', dataKPI);
+          // Cargar Chart.js si no está cargado
+          if (!window.Chart) {
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+            script.onload = renderGraficaKPI;
+            document.head.appendChild(script);
+          } else {
+            renderGraficaKPI();
+          }
+          function renderGraficaKPI() {
+            console.log('Renderizando Chart.js con:', dataLabels, dataKPI);
+            const ctx = document.getElementById('grafica-kpi').getContext('2d');
+            if (window._graficaKPI) window._graficaKPI.destroy();
+            window._graficaKPI = new Chart(ctx, {
+              type: 'bar',
+              data: {
+                labels: dataLabels,
+                datasets: [{
+                  label: '% KPI logrado',
+                  data: dataKPI,
+                  backgroundColor: dataLabels.map((_,i)=>i%2===0?'#4e54c8':'#38ef7d'),
+                  borderRadius: 8,
+                }]
+              },
+              options: {
+                responsive: true,
+                plugins: {
+                  legend: { display: false },
+                  tooltip: { enabled: true }
+                },
+                scales: {
+                  y: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: { callback: v => v + '%' },
+                    title: { display: true, text: '% KPI' }
+                  },
+                  x: {
+                    title: { display: true, text: 'Sucursal / Franquicia' }
+                  }
+                }
+              }
+            });
+          }
           break;
         case 'parametros':
           main.innerHTML = `
@@ -336,12 +514,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
           
         case 'usuarios':
-          main.innerHTML = `
-            <div class="card">
-              <h1>Gestión de Usuarios</h1>
-              <p>(Solo admin) Aquí irá la gestión de usuarios.</p>
-            </div>
-          `;
+          if (window.userRole === 'admin') {
+            main.innerHTML = `
+              <div class="card">
+                <h1>Gestión de Usuarios</h1>
+                <p>(Solo admin) Aquí irá la gestión de usuarios.</p>
+              </div>
+            `;
+          } else {
+            main.innerHTML = `
+              <div class="card">
+                <h2>Acceso denegado</h2>
+                <p>No tienes permisos para ver esta sección.</p>
+              </div>
+            `;
+          }
           break;
         default:
           main.innerHTML = `<div class="card"><h1>Bienvenido</h1></div>`;
